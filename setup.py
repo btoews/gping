@@ -32,7 +32,7 @@ def get_authors():
 
 
 setup(
-    name='gping',
+    name='gevent-ping',
     version="0.1",
     description='A gevent fork of python-ping.',
     author=get_authors(),

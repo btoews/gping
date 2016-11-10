@@ -62,13 +62,14 @@ class GPing:
     Then call its send method to send pings. Callbacks will be sent ping
     details
     """
-    def __init__(self,timeout=2,max_outstanding=10):
+    def __init__(self, timeout=2, max_outstanding=10, bind=None):
         """
         :timeout            - amount of time a ICMP echo request can be outstanding
         :max_outstanding    - maximum number of outstanding ICMP echo requests without responses (limits traffic)
         """
         self.timeout = timeout
         self.max_outstanding = max_outstanding
+        self.bind = bind
 
         # id we will increment with each ping
         self.id = 0
@@ -95,6 +96,10 @@ class GPing:
                 )
                 raise socket.error(msg)
             raise # raise the original error
+
+        # Bind the socket to an interface
+        if self.bind:
+            self.socket.bind((self.bind, 0)) # Port number is irrelevant for ICMP
 
         self.receive_glet = gevent.spawn(self.__receive__)
         self.processto_glet = gevent.spawn(self.__process_timeouts__)
@@ -248,8 +253,9 @@ class GPing:
             print >>sys.stderr, message
 
 
-def ping(hostnames):
-    gp = GPing()
+def ping(hostnames, **options):
+    options = options or {}
+    gp = GPing(**options)
 
     template = '{ip:20s}{delay:15s}{hostname:40s}{message}'
     header = template.format(hostname='Hostname', ip='IP', delay='Delay', message='Message')

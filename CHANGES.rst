@@ -12,6 +12,7 @@ In progress
 - Add argument parsing for interactive use, e.g. ``--hostnames=www.example.net,mail.example.net``
 - Incorporate "Make it possible to ping without root access" using ``socket.SOCK_DGRAM`` instead of ``socket.SOCK_RAW``
   by Marko Tibold: https://github.com/markotibold/gping/commit/b75fa2d4
+- Incorporate  "Allow binding to an interface" by Dan Harvey: https://github.com/danharvey/pyping/commit/cb848976
 
 2012-08-21 0.0
 ==============

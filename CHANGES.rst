@@ -14,10 +14,13 @@ In progress
   by Marko Tibold: https://github.com/markotibold/gping/commit/b75fa2d4
 - Incorporate  "Allow binding to an interface" by Dan Harvey: https://github.com/danharvey/pyping/commit/cb848976
 
-2012-08-21 0.0
+
+2012-08-21 0.1
 ==============
 - Fix setup.py deps
 - Add install instructions to README
+- Tag release ``gping-0.1``
+- Make verbose output optional
 
 2012-07-17 0.0
 ==============

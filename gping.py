@@ -44,17 +44,6 @@ def checksum(source_string):
 
     return answer
 
-def test_callback(ping):
-    template = '{ip:20s}{delay:15s}{hostname:40s}{message}'
-    message = template.format(
-        hostname = ping['dest_addr'],
-        ip       = ping['dest_ip'],
-        delay    = ping['success'] and str(round(ping['delay'], 6)) or '',
-        message  = 'message' in ping and ping['message'] or ''
-    )
-    message = message.strip()
-    print >>sys.stderr, message
-
 
 class GPing:
     """
@@ -62,7 +51,7 @@ class GPing:
     Then call its send method to send pings. Callbacks will be sent ping
     details
     """
-    def __init__(self, timeout=2, max_outstanding=10, bind=None):
+    def __init__(self, timeout=2, max_outstanding=10, bind=None, callback=None):
         """
         :timeout            - amount of time a ICMP echo request can be outstanding
         :max_outstanding    - maximum number of outstanding ICMP echo requests without responses (limits traffic)
@@ -70,14 +59,18 @@ class GPing:
         self.timeout = timeout
         self.max_outstanding = max_outstanding
         self.bind = bind
+        self.callback = callback
 
         # id we will increment with each ping
         self.id = 0
 
-        # object to hold and keep track of all of our self.pings
+        # Object to hold and keep track of all of our self.pings
         self.pings = {}
 
-        # Hold failures
+        # Keep track of results
+        self.results = []
+
+        # Keep track of failures
         self.failures = []
 
         # event to file when we want to shut down
@@ -123,16 +116,19 @@ class GPing:
             gevent.sleep()
 
 
-    def send(self, dest_addr, callback, psize=64):
+    def send(self, dest_addr, callback=None, psize=64):
         """
         Send a ICMP echo request.
         :dest_addr - where to send it
         :callback  - what to call when we get a response
         :psize     - how much data to send with it
         """
+
+        callback = callback or self.callback
+
         # make sure we dont have too many outstanding requests
         while len(self.pings) >= self.max_outstanding:
-            gevent.sleep()
+            gevent.sleep(0.01)
 
         # figure out our id
         packet_id = self.id
@@ -184,6 +180,14 @@ class GPing:
         #mark the packet as sent
         self.pings[packet_id]['sent'] = True
 
+    def record_result(self, ping):
+
+        # Keep track of ping results
+        self.results.append(ping)
+
+        # Propagate individual callback
+        if 'callback' in ping and callable(ping['callback']):
+            ping['callback'](ping)
 
     def __process_timeouts__(self):
         """
@@ -199,7 +203,7 @@ class GPing:
 
                 # Handle all failures
                 if self.pings[i]['error'] == True:
-                    self.pings[i]['callback'](self.pings[i])
+                    self.record_result(self.pings[i])
                     self.failures.append(self.pings[i])
                     del(self.pings[i])
                     break
@@ -238,13 +242,28 @@ class GPing:
                 # i'd call that a success
                 self.pings[packet_id]['success'] = True
 
-                # call our callback if we've got one
-                self.pings[packet_id]['callback'](self.pings[packet_id])
+                # Record the ping result
+                self.record_result(self.pings[packet_id])
 
                 # delete the ping
                 del(self.pings[packet_id])
 
-    def print_failures(self):
+            gevent.sleep()
+
+    def print_report(self):
+
+        # Output header
+        print >>sys.stderr
+        template = '{ip:20s}{delay:15s}{hostname:40s}{message}'
+        header = template.format(hostname='Hostname', ip='IP', delay='Delay', message='Message')
+        print >>sys.stderr, header
+
+        # Output results
+        for result in self.results:
+            message = self.format_ping_result(result)
+            print >>sys.stderr, message
+
+        # Output failures
         print >>sys.stderr
         print >>sys.stderr, 'Failures:'
         template = '{hostname:45}{message}'
@@ -252,19 +271,32 @@ class GPing:
             message = template.format(hostname=failure['dest_addr'], message=failure.get('message', 'unknown error'))
             print >>sys.stderr, message
 
+    def format_ping_result(self, ping):
+        template = '{ip:20s}{delay:15s}{hostname:40s}{message}'
+        message = template.format(
+            hostname = ping['dest_addr'],
+            ip       = ping['dest_ip'],
+            delay    = ping['success'] and str(round(ping['delay'], 6)) or '',
+            message  = 'message' in ping and ping['message'] or ''
+        )
+        message = message.strip()
+        return message
 
-def ping(hostnames, **options):
+
+def ping(hostnames, verbose=False, **options):
     options = options or {}
     gp = GPing(**options)
 
-    template = '{ip:20s}{delay:15s}{hostname:40s}{message}'
-    header = template.format(hostname='Hostname', ip='IP', delay='Delay', message='Message')
-    print >>sys.stderr, header
-
     for hostname in hostnames:
-        gp.send(hostname, test_callback)
+        gp.send(hostname)
+
     gp.join()
-    gp.print_failures()
+
+    if verbose:
+        gp.print_report()
+
+    return gp
+
 
 def run():
 
@@ -280,10 +312,10 @@ def run():
     if '--hostnames' in args.assignments:
         hostnames_raw = args.assignments['--hostnames'].get(0)
         hostnames = hostnames_raw.split(',')
-        ping(hostnames)
+        ping(hostnames, verbose=True)
 
 
 if __name__ == '__main__':
     top_100_domains = ['google.com','facebook.com','youtube.com','yahoo.com','baidu.com','wikipedia.org','live.com','qq.com','twitter.com','amazon.com','linkedin.com','blogspot.com','google.co.in','taobao.com','sina.com.cn','yahoo.co.jp','msn.com','google.com.hk','wordpress.com','google.de','google.co.jp','google.co.uk','ebay.com','yandex.ru','163.com','google.fr','weibo.com','googleusercontent.com','bing.com','microsoft.com','google.com.br','babylon.com','soso.com','apple.com','mail.ru','t.co','tumblr.com','vk.com','google.ru','sohu.com','google.es','pinterest.com','google.it','craigslist.org','bbc.co.uk','livejasmin.com','tudou.com','paypal.com','blogger.com','xhamster.com','ask.com','youku.com','fc2.com','google.com.mx','xvideos.com','google.ca','imdb.com','flickr.com','go.com','tmall.com','avg.com','ifeng.com','hao123.com','zedo.com','conduit.com','google.co.id','pornhub.com','adobe.com','blogspot.in','odnoklassniki.ru','google.com.tr','cnn.com','aol.com','360buy.com','google.com.au','rakuten.co.jp','about.com','mediafire.com','alibaba.com','ebay.de','espn.go.com','wordpress.org','chinaz.com','google.pl','stackoverflow.com','netflix.com','ebay.co.uk','uol.com.br','amazon.de','ameblo.jp','adf.ly','godaddy.com','huffingtonpost.com','amazon.co.jp','cnet.com','globo.com','youporn.com','4shared.com','thepiratebay.se','renren.com']
-    ping(top_100_domains)
+    ping(top_100_domains, verbose=True)
 

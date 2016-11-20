@@ -33,7 +33,7 @@ def get_authors():
 
 setup(
     name='gping',
-    version="0.2dev2",
+    version="0.2dev3",
     description='A gevent fork of python-ping.',
     author=get_authors(),
     maintainer="Ben Toews",

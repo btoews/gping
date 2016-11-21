@@ -90,7 +90,7 @@ class GPing:
                 raise socket.error(msg)
             raise # raise the original error
 
-        # Bind the socket to an interface
+        # Bind the socket to the interface of given IP address
         if self.bind:
             self.socket.bind((self.bind, 0)) # Port number is irrelevant for ICMP
 
@@ -309,10 +309,22 @@ def run():
     print 'Assignments detected: ' + str(args.assignments)
     """
 
+    # The --hostnames argument is obligatory
     if '--hostnames' in args.assignments:
+
+        # Compute list of hostnames from argument
         hostnames_raw = args.assignments['--hostnames'].get(0)
         hostnames = hostnames_raw.split(',')
-        ping(hostnames, verbose=True)
+
+        # Compute additional options from arguments
+        options = {}
+        if '--bind' in args.assignments:
+            options['bind'] = args.assignments['--bind'].get(0)
+
+        ping(hostnames, verbose=True, **options)
+
+    else:
+        raise ValueError('Please specify the --hostnames= argument for passing a list of comma-separated hostnames')
 
 
 if __name__ == '__main__':

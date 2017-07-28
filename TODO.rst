@@ -6,6 +6,7 @@ Tasks
 =====
 - [x] Add entrypoint ``gping`` and argument parsing
 - [o] Add reading from stdin
+- [o] Add collectd metrics gathering: https://pythonhosted.org/collectd/
 
 Upstream changes
 ================

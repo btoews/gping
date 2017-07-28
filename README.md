@@ -12,6 +12,9 @@ The point is to have an event driven ping utility for doing a huge number of con
     # Ping some hostnames
     gping --hostnames=gnu.org,fsf.org,google.com,microsoft.com,googleusercontent.com,live.com,stackoverflow.com,141.1.1.1,8.8.8.8,192.168.123.1,192.168.999.1
 
+    # Bind to a specific IP address
+    gping --bind=192.168.111.2 --hostnames=google.com,stackoverflow.com,8.8.8.8
+
 ### Demo with 100 concurrent pings ###
 
     # Ping the top 100 domains
